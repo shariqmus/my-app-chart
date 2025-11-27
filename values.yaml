@@ -1,10 +1,6 @@
-# values.yaml
-# ==========================
-# Namespace
 namespace:
   name: my-app-dev
 
-# Application settings
 app:
   name: my-app
   image:
@@ -19,22 +15,86 @@ app:
     limits:
       cpu: "500m"
       memory: "256Mi"
-  env: [] # [{ name: "ENV_VAR", value: "value" }]
+  env: []
 
-# Service settings
 service:
   type: ClusterIP
   port: 80
   targetPort: 80
 
-# Ingress settings (optional)
-ingress:
+# Gateway API settings
+gateway:
   enabled: true
-  annotations: 
-    kubernetes.io/ingress.class: nginx
-  hosts:
-    - host: my-app.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: [] # [{ hosts: ["my-app.example.com"], secretName: "my-app-tls" }]
+  
+  # Set to false to use a shared gateway (recommended)
+  # Set to true to create a dedicated gateway per app
+  createGateway: false
+  
+  # If createGateway: false, specify the shared gateway
+  sharedGateway:
+    name: shared-gateway
+    namespace: gateway-system
+  
+  # Gateway configuration (only used if createGateway: true)
+  gatewayClassName: cilium  # FIXED: Changed from istio to cilium
+  
+  # Optional: Gateway-level annotations (for DO LB configuration)
+  gatewayAnnotations: {}
+  # Example annotations:
+  # gatewayAnnotations:
+  #   service.beta.kubernetes.io/do-loadbalancer-size-slug: "lb-small"
+  #   service.beta.kubernetes.io/do-loadbalancer-algorithm: "round_robin"
+  
+  # Listener configuration (only used if createGateway: true)
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All  # Changed from Same to All for shared gateway
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: wildcard-tls  # Use a wildcard cert for shared gateway
+            kind: Secret
+            namespace: gateway-system  # Cert in gateway namespace
+      allowedRoutes:
+        namespaces:
+          from: All
+  
+  # HTTPRoute configuration (always used)
+  httproute:
+    annotations:
+      # External-DNS will use first hostname if not specified
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+      external-dns.alpha.kubernetes.io/ttl: "120"
+      # Optional: explicitly set hostname
+      # external-dns.alpha.kubernetes.io/hostname: "my-app.example.com"
+  
+  # Optional: Use custom parent gateway reference
+  # parentRefs:
+  #   - name: custom-gateway
+  #     namespace: other-namespace
+  
+  # Hostnames for this app
+  hostnames:
+    - my-app.example.com
+  
+  # Routing rules
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: my-app  # Should match app.name (or omit to use app.name automatically)
+          port: 80  # Should match service.port (or omit to use service.port automatically)
+          weight: 1
+
+# Optional: Keep ingress for backward compatibility during migration
+ingress:
+  enabled: false

@@ -1,0 +1,72 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Values.app.name }}-httproute
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.app.name }}
+  annotations:
+    # External-DNS annotations for Cloudflare
+    {{- if .Values.gateway.httproute.annotations }}
+    {{- toYaml .Values.gateway.httproute.annotations | nindent 4 }}
+    {{- else if .Values.gateway.hostnames }}
+    external-dns.alpha.kubernetes.io/hostname: {{ index .Values.gateway.hostnames 0 | quote }}
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+    {{- end }}
+spec:
+  parentRefs:
+  {{- if .Values.gateway.parentRefs }}
+  {{- range .Values.gateway.parentRefs }}
+    - name: {{ .name }}
+      {{- if .namespace }}
+      namespace: {{ .namespace }}
+      {{- end }}
+  {{- end }}
+  {{- else if .Values.gateway.createGateway }}
+    - name: {{ $.Values.app.name }}-gateway
+      namespace: {{ $.Values.namespace.name }}
+  {{- else }}
+    {{- if .Values.gateway.sharedGateway }}
+    - name: {{ .Values.gateway.sharedGateway.name }}
+      namespace: {{ .Values.gateway.sharedGateway.namespace }}
+    {{- else }}
+    {{- fail "sharedGateway must be defined when createGateway is false" -}}
+    {{- end }}
+  {{- end }}
+  hostnames:
+  {{- range .Values.gateway.hostnames }}
+    - {{ . | quote }}
+  {{- end }}
+  rules:
+  {{- range .Values.gateway.rules }}
+    - matches:
+      {{- range .matches }}
+        - path:
+            type: {{ .path.type }}
+            value: {{ .path.value | quote }}
+          {{- if .headers }}
+          headers:
+          {{- range .headers }}
+            - name: {{ .name }}
+              value: {{ .value }}
+          {{- end }}
+          {{- end }}
+      {{- end }}
+      {{- if .filters }}
+      filters:
+      {{- toYaml .filters | nindent 8 }}
+      {{- end }}
+      backendRefs:
+      {{- range .backendRefs }}
+        - name: {{ .name | default $.Values.app.name }}
+          port: {{ .port | default $.Values.service.port }}
+          {{- if .namespace }}
+          namespace: {{ .namespace }}
+          {{- end }}
+          {{- if .weight }}
+          weight: {{ .weight }}
+          {{- end }}
+      {{- end }}
+  {{- end }}
+{{- end }}
