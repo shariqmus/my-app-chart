@@ -1,0 +1,34 @@
+# Helm chart dependencies
+charts/
+*.tgz
+
+# Helm lock files (optional - uncomment if you don't want to track dependency versions)
+# requirements.lock
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Test output
+test-output/
+*.test
+

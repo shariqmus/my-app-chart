@@ -1,0 +1,40 @@
+# values.yaml
+# ==========================
+# Namespace
+namespace:
+  name: my-app-dev
+
+# Application settings
+app:
+  name: my-app
+  image:
+    repository: nginx
+    tag: alpine
+  replicas: 1
+  containerPort: 80
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+  env: [] # [{ name: "ENV_VAR", value: "value" }]
+
+# Service settings
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Ingress settings (optional)
+ingress:
+  enabled: true
+  annotations: 
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: my-app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: [] # [{ hosts: ["my-app.example.com"], secretName: "my-app-tls" }]
