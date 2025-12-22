@@ -3,7 +3,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: {{ .Values.app.name }}-gateway
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ printf "%s-%s" .Values.namespace.name .Values.environment }}
   labels:
     app: {{ .Values.app.name }}
   {{- with .Values.gateway.gatewayAnnotations }}

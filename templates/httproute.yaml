@@ -3,7 +3,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ .Values.app.name }}-httproute
-  namespace: {{ .Values.namespace.name }}
+  namespace: {{ printf "%s-%s" .Values.namespace.name .Values.environment }}
   labels:
     app: {{ .Values.app.name }}
   annotations:
@@ -25,7 +25,7 @@ spec:
   {{- end }}
   {{- else if .Values.gateway.createGateway }}
     - name: {{ $.Values.app.name }}-gateway
-      namespace: {{ $.Values.namespace.name }}
+      namespace: {{ printf "%s-%s" $.Values.namespace.name $.Values.environment }}
   {{- else }}
     {{- if .Values.gateway.sharedGateway }}
     - name: {{ .Values.gateway.sharedGateway.name }}
