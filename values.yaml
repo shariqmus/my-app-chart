@@ -1,5 +1,7 @@
+environment: dev
+
 namespace:
-  name: my-app-dev
+  name: my-app
 
 app:
   name: my-app
@@ -15,7 +17,7 @@ app:
     limits:
       cpu: "500m"
       memory: "256Mi"
-  env: []
+  env: [] 
 
 service:
   type: ClusterIP
@@ -98,3 +100,17 @@ gateway:
 # Optional: Keep ingress for backward compatibility during migration
 ingress:
   enabled: false
+
+vaultStaticSecret:
+  enabled: false
+  # Optional: override name/namespace, otherwise derived from app/namespace values
+  # name: app-test-secret # Defaults to {app.name}-secret if not specified
+  # namespace: my-app # Defaults to the same namespace as the app if not specified
+  # vaultAuthRef: vault-auth
+  # mount: kv
+  # type: kv-v2
+  # path: # Defaults to {environment}/apps/{app.name} if not specified, where `environment` is the top-level value
+  # destination:
+    # Kubernetes Secret name to create from Vault data
+    # name: my-app-secret  # Defaults to {app.name}-secret if not specified
+    # create: true  # Defaults to true if not specified

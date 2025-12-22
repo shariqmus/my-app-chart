@@ -4,10 +4,10 @@ description: >
   A generic, reusable Helm chart for deploying any application
   with namespace, deployment, service, and gateway API resources.
 type: application
-version: 1.0.0             # chart version, bump up when any change to templates or values.yaml
+version: 1.0.1             # chart version, bump up when any change to templates or values.yaml
 appVersion: "1.0.0"        # version of the "app" this chart deploys
 
 # Optional maintainers
 maintainers:
   - name: DevOps Team
-    email: devops@yourcompany.com
+    email: devops@platformhub.space
