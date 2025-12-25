@@ -1,0 +1,449 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Values",
+  "description": "Schema for my-app-chart values.yaml",
+  "properties": {
+    "environment": {
+      "type": "string",
+      "description": "Environment name (e.g., dev, staging, prod)",
+      "default": "dev"
+    },
+    "namespace": {
+      "type": "object",
+      "description": "Namespace configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Namespace name (will be combined with environment)"
+        }
+      },
+      "required": ["name"]
+    },
+    "app": {
+      "type": "object",
+      "description": "Application configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Application name"
+        },
+        "image": {
+          "type": "object",
+          "description": "Container image configuration",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "Container image repository"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Container image tag"
+            }
+          },
+          "required": ["repository", "tag"]
+        },
+        "replicas": {
+          "type": "integer",
+          "description": "Number of replicas",
+          "minimum": 1,
+          "default": 1
+        },
+        "containerPort": {
+          "type": "integer",
+          "description": "Container port",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "resources": {
+          "type": "object",
+          "description": "Resource requests and limits",
+          "properties": {
+            "requests": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU request (e.g., 100m)"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory request (e.g., 128Mi)"
+                }
+              }
+            },
+            "limits": {
+              "type": "object",
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "description": "CPU limit (e.g., 500m)"
+                },
+                "memory": {
+                  "type": "string",
+                  "description": "Memory limit (e.g., 256Mi)"
+                }
+              }
+            }
+          }
+        },
+        "env": {
+          "type": "array",
+          "description": "Environment variables",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Environment variable name"
+              },
+              "value": {
+                "type": "string",
+                "description": "Environment variable value"
+              }
+            },
+            "required": ["name", "value"]
+          },
+          "default": []
+        }
+      },
+      "required": ["name", "image", "replicas", "containerPort"]
+    },
+    "service": {
+      "type": "object",
+      "description": "Service configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Service type",
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"],
+          "default": "ClusterIP"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Service port",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "targetPort": {
+          "type": "integer",
+          "description": "Target port",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": ["type", "port", "targetPort"]
+    },
+    "gateway": {
+      "type": "object",
+      "description": "Gateway API configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Gateway API resources",
+          "default": true
+        },
+        "createGateway": {
+          "type": "boolean",
+          "description": "Create a dedicated gateway (false to use shared gateway)",
+          "default": false
+        },
+        "sharedGateway": {
+          "type": "object",
+          "description": "Shared gateway configuration (used when createGateway is false)",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Shared gateway name"
+            },
+            "namespace": {
+              "type": "string",
+              "description": "Shared gateway namespace"
+            }
+          }
+        },
+        "gatewayClassName": {
+          "type": "string",
+          "description": "Gateway class name",
+          "default": "cilium"
+        },
+        "gatewayAnnotations": {
+          "type": "object",
+          "description": "Gateway annotations",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        },
+        "listeners": {
+          "type": "array",
+          "description": "Gateway listeners (only used if createGateway is true)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Listener name"
+              },
+              "protocol": {
+                "type": "string",
+                "description": "Listener protocol",
+                "enum": ["HTTP", "HTTPS", "TLS", "TCP", "UDP"]
+              },
+              "port": {
+                "type": "integer",
+                "description": "Listener port",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "allowedRoutes": {
+                "type": "object",
+                "properties": {
+                  "namespaces": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "enum": ["All", "Same", "Selector"],
+                        "default": "All"
+                      }
+                    }
+                  }
+                }
+              },
+              "tls": {
+                "type": "object",
+                "description": "TLS configuration",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": ["Terminate", "Passthrough"],
+                    "description": "TLS mode"
+                  },
+                  "certificateRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "Certificate reference name"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "description": "Certificate reference kind",
+                          "default": "Secret"
+                        },
+                        "namespace": {
+                          "type": "string",
+                          "description": "Certificate reference namespace"
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  }
+                }
+              }
+            },
+            "required": ["name", "protocol", "port"]
+          }
+        },
+        "httproute": {
+          "type": "object",
+          "description": "HTTPRoute configuration",
+          "properties": {
+            "annotations": {
+              "type": "object",
+              "description": "HTTPRoute annotations",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "parentRefs": {
+          "type": "array",
+          "description": "Custom parent gateway references",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Gateway name"
+              },
+              "namespace": {
+                "type": "string",
+                "description": "Gateway namespace"
+              }
+            },
+            "required": ["name"]
+          }
+        },
+        "hostnames": {
+          "type": "array",
+          "description": "Hostnames for the HTTPRoute",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "rules": {
+          "type": "array",
+          "description": "HTTPRoute rules",
+          "items": {
+            "type": "object",
+            "properties": {
+              "matches": {
+                "type": "array",
+                "description": "Route matches",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["Exact", "PathPrefix", "RegularExpression"],
+                          "description": "Path match type"
+                        },
+                        "value": {
+                          "type": "string",
+                          "description": "Path value"
+                        }
+                      },
+                      "required": ["type", "value"]
+                    },
+                    "headers": {
+                      "type": "array",
+                      "description": "Header matches",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Header name"
+                          },
+                          "value": {
+                            "type": "string",
+                            "description": "Header value"
+                          }
+                        },
+                        "required": ["name", "value"]
+                      }
+                    }
+                  },
+                  "required": ["path"]
+                }
+              },
+              "filters": {
+                "type": "array",
+                "description": "Route filters"
+              },
+              "backendRefs": {
+                "type": "array",
+                "description": "Backend references",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Backend service name"
+                    },
+                    "port": {
+                      "type": "integer",
+                      "description": "Backend service port",
+                      "minimum": 1,
+                      "maximum": 65535
+                    },
+                    "namespace": {
+                      "type": "string",
+                      "description": "Backend service namespace"
+                    },
+                    "weight": {
+                      "type": "integer",
+                      "description": "Backend weight",
+                      "minimum": 0,
+                      "maximum": 100
+                    }
+                  },
+                  "required": ["name", "port"]
+                },
+                "minItems": 1
+              }
+            },
+            "required": ["matches", "backendRefs"]
+          }
+        }
+      },
+      "required": ["enabled"]
+    },
+    "ingress": {
+      "type": "object",
+      "description": "Ingress configuration (for backward compatibility)",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable ingress",
+          "default": false
+        }
+      }
+    },
+    "vaultStaticSecret": {
+      "type": "object",
+      "description": "Vault Static Secret configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Vault Static Secret",
+          "default": false
+        },
+        "name": {
+          "type": "string",
+          "description": "VaultStaticSecret name (defaults to {app.name}-secret)"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "VaultStaticSecret namespace (defaults to app namespace)"
+        },
+        "vaultAuthRef": {
+          "type": "string",
+          "description": "Vault auth reference",
+          "default": "vault-auth"
+        },
+        "mount": {
+          "type": "string",
+          "description": "Vault mount path",
+          "default": "kv"
+        },
+        "type": {
+          "type": "string",
+          "description": "Vault secret type",
+          "default": "kv-v2"
+        },
+        "path": {
+          "type": "string",
+          "description": "Vault secret path (defaults to {environment}/apps/{app.name})"
+        },
+        "destination": {
+          "type": "object",
+          "description": "Destination Kubernetes Secret configuration",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Kubernetes Secret name (defaults to {app.name}-secret)"
+            },
+            "create": {
+              "type": "boolean",
+              "description": "Whether to create the destination secret",
+              "default": true
+            }
+          }
+        }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "required": ["environment", "namespace", "app", "service"]
+}
+
