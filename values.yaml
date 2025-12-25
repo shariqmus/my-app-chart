@@ -17,7 +17,52 @@ app:
     limits:
       cpu: "500m"
       memory: "256Mi"
-  env: [] 
+  env: []
+  
+  # Production Policy Overlays:
+  # When environment is set to "prd", "prod", or "production", the following policies are automatically enforced:
+  # - Minimum 2 replicas (will fail if less than 2)
+  # - Image tag cannot be "latest" or empty
+  # - Resource limits and requests are required
+  # - Readiness and liveness probes are required
+  # - Security contexts are automatically applied (non-root user, read-only filesystem, dropped capabilities)
+  # 
+  # For production, you must configure the following:
+  
+  # Readiness probe (required in production)
+  # readinessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: 80
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 10
+  #   timeoutSeconds: 5
+  #   successThreshold: 1
+  #   failureThreshold: 3
+  
+  # Liveness probe (required in production)
+  # livenessProbe:
+  #   httpGet:
+  #     path: /
+  #     port: 80
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   timeoutSeconds: 5
+  #   successThreshold: 1
+  #   failureThreshold: 3
+  
+  # Optional: Custom security contexts (auto-applied in production if not specified)
+  # securityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: 1000
+  #   fsGroup: 1000
+  # 
+  # containerSecurityContext:
+  #   allowPrivilegeEscalation: false
+  #   readOnlyRootFilesystem: true
+  #   capabilities:
+  #     drop:
+  #       - ALL
 
 service:
   type: ClusterIP

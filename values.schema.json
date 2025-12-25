@@ -6,7 +6,8 @@
   "properties": {
     "environment": {
       "type": "string",
-      "description": "Environment name (e.g., dev, staging, prod)",
+      "description": "Environment name (e.g., dev, uat, prd). Production environments (prd/prod/production) enforce stricter policies: minimum 2 replicas, no 'latest' image tags, required resource limits, required probes, and security contexts.",
+      "enum": ["dev", "development", "uat", "staging", "stage", "prd", "prod", "production"],
       "default": "dev"
     },
     "namespace": {
@@ -38,14 +39,14 @@
             },
             "tag": {
               "type": "string",
-              "description": "Container image tag"
+              "description": "Container image tag (cannot be 'latest' in production)"
             }
           },
           "required": ["repository", "tag"]
         },
         "replicas": {
           "type": "integer",
-          "description": "Number of replicas",
+          "description": "Number of replicas (minimum 2 required in production)",
           "minimum": 1,
           "default": 1
         },
@@ -57,7 +58,7 @@
         },
         "resources": {
           "type": "object",
-          "description": "Resource requests and limits",
+          "description": "Resource requests and limits (required in production)",
           "properties": {
             "requests": {
               "type": "object",
@@ -105,6 +106,162 @@
             "required": ["name", "value"]
           },
           "default": []
+        },
+        "readinessProbe": {
+          "type": "object",
+          "description": "Readiness probe configuration (required in production)",
+          "properties": {
+            "httpGet": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "tcpSocket": {
+              "type": "object",
+              "properties": {
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "exec": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "initialDelaySeconds": {
+              "type": "integer",
+              "default": 10
+            },
+            "periodSeconds": {
+              "type": "integer",
+              "default": 10
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "default": 5
+            },
+            "successThreshold": {
+              "type": "integer",
+              "default": 1
+            },
+            "failureThreshold": {
+              "type": "integer",
+              "default": 3
+            }
+          }
+        },
+        "livenessProbe": {
+          "type": "object",
+          "description": "Liveness probe configuration (required in production)",
+          "properties": {
+            "httpGet": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "tcpSocket": {
+              "type": "object",
+              "properties": {
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "exec": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "initialDelaySeconds": {
+              "type": "integer",
+              "default": 30
+            },
+            "periodSeconds": {
+              "type": "integer",
+              "default": 10
+            },
+            "timeoutSeconds": {
+              "type": "integer",
+              "default": 5
+            },
+            "successThreshold": {
+              "type": "integer",
+              "default": 1
+            },
+            "failureThreshold": {
+              "type": "integer",
+              "default": 3
+            }
+          }
+        },
+        "securityContext": {
+          "type": "object",
+          "description": "Pod-level security context (auto-enforced in production)",
+          "properties": {
+            "runAsNonRoot": {
+              "type": "boolean"
+            },
+            "runAsUser": {
+              "type": "integer"
+            },
+            "fsGroup": {
+              "type": "integer"
+            }
+          }
+        },
+        "containerSecurityContext": {
+          "type": "object",
+          "description": "Container-level security context (auto-enforced in production)",
+          "properties": {
+            "allowPrivilegeEscalation": {
+              "type": "boolean"
+            },
+            "readOnlyRootFilesystem": {
+              "type": "boolean"
+            },
+            "capabilities": {
+              "type": "object",
+              "properties": {
+                "drop": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "add": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "required": ["name", "image", "replicas", "containerPort"]

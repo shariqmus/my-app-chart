@@ -1,10 +1,13 @@
+{{- include "my-app-chart.validateImageTag" . }}
+{{- include "my-app-chart.enforceResourceLimits" . }}
+{{- include "my-app-chart.validateProbes" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.app.name }}
-  namespace: {{ printf "%s-%s" .Values.namespace.name .Values.environment }}
+  namespace: {{ include "my-app-chart.namespace" . }}
 spec:
-  replicas: {{ .Values.app.replicas }}
+  replicas: {{ include "my-app-chart.enforceReplicas" . }}
   selector:
     matchLabels:
       app: {{ .Values.app.name }}
@@ -13,11 +16,19 @@ spec:
       labels:
         app: {{ .Values.app.name }}
     spec:
+      {{- $podSecurityContext := include "my-app-chart.getSecurityContext" . }}
+      {{- if $podSecurityContext }}
+      {{- $podSecurityContext | nindent 6 }}
+      {{- end }}
       containers:
         - name: {{ .Values.app.name }}
           image: {{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}
           ports:
             - containerPort: {{ .Values.app.containerPort }}
+          {{- $containerSecurityContext := include "my-app-chart.getContainerSecurityContext" . }}
+          {{- if $containerSecurityContext }}
+          {{- $containerSecurityContext | nindent 10 }}
+          {{- end }}
           resources:
             limits:
               cpu: {{ .Values.app.resources.limits.cpu }}
@@ -25,6 +36,14 @@ spec:
             requests:
               cpu: {{ .Values.app.resources.requests.cpu }}
               memory: {{ .Values.app.resources.requests.memory }}
+          {{- if .Values.app.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.app.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.app.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.app.livenessProbe | nindent 12 }}
+          {{- end }}
           env:
             {{- range .Values.app.env }}
             - name: {{ .name }}
