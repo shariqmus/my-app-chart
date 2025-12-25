@@ -46,7 +46,7 @@ Production: minimum 2, Dev/Staging: minimum 1
 {{- define "my-app-chart.enforceReplicas" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
 {{- $replicas := .Values.app.replicas | int -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 {{- if lt $replicas 2 -}}
 {{- fail (printf "Production environment requires at least 2 replicas, got %d" $replicas) -}}
 {{- end -}}
@@ -60,7 +60,7 @@ Validate image tag - production cannot use 'latest' tag
 {{- define "my-app-chart.validateImageTag" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
 {{- $tag := .Values.app.image.tag | default "" -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 {{- if or (eq $tag "latest") (eq $tag "") -}}
 {{- fail "Production environment cannot use 'latest' or empty image tag. Please specify a specific version tag." -}}
 {{- end -}}
@@ -72,7 +72,7 @@ Enforce resource limits in production
 */}}
 {{- define "my-app-chart.enforceResourceLimits" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 {{- if not .Values.app.resources.limits -}}
 {{- fail "Production environment requires resource limits to be set" -}}
 {{- end -}}
@@ -100,7 +100,7 @@ Production enforces non-root user and read-only root filesystem
 */}}
 {{- define "my-app-chart.getSecurityContext" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 securityContext:
   runAsNonRoot: true
   runAsUser: 1000
@@ -120,7 +120,7 @@ Get container security context
 */}}
 {{- define "my-app-chart.getContainerSecurityContext" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
@@ -138,7 +138,7 @@ Validate production readiness - ensure probes are configured
 */}}
 {{- define "my-app-chart.validateProbes" -}}
 {{- $isProd := include "my-app-chart.isProduction" . -}}
-{{- if $isProd -}}
+{{- if eq $isProd "true" -}}
 {{- if not .Values.app.readinessProbe -}}
 {{- fail "Production environment requires readinessProbe to be configured" -}}
 {{- end -}}
