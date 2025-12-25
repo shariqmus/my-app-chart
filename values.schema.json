@@ -41,8 +41,7 @@
               "type": "string",
               "description": "Container image tag (cannot be 'latest' in production)"
             }
-          },
-          "required": ["repository", "tag"]
+          }
         },
         "replicas": {
           "type": "integer",
