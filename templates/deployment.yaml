@@ -26,10 +26,10 @@ spec:
       {{- include "my-app-chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- if .Values.workload.pod.annotations }}
       annotations:
-        {{- with .Values.workload.pod.annotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        {{- toYaml .Values.workload.pod.annotations | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "my-app-chart.selectorLabels" . | nindent 8 }}
         {{- with .Values.workload.pod.labels }}
@@ -154,7 +154,8 @@ spec:
               {{- end }}
             {{- end }}
           {{- end }}
-          {{- if .Values.containers.main.envFrom }}
+          {{- $hasEnvFrom := or (and .Values.containers.main.envFrom.configMaps (gt (len .Values.containers.main.envFrom.configMaps) 0)) (and .Values.containers.main.envFrom.secrets (gt (len .Values.containers.main.envFrom.secrets) 0)) }}
+          {{- if $hasEnvFrom }}
           envFrom:
             {{- if .Values.containers.main.envFrom.configMaps }}
             {{- range .Values.containers.main.envFrom.configMaps }}
@@ -169,6 +170,8 @@ spec:
             {{- end }}
             {{- end }}
           {{- end }}
+          {{- $hasVolumeMounts := or (and .Values.containers.main.volumeMounts (gt (len .Values.containers.main.volumeMounts) 0)) .Values.persistence.enabled }}
+          {{- if $hasVolumeMounts }}
           volumeMounts:
             {{- if .Values.containers.main.volumeMounts }}
             {{- toYaml .Values.containers.main.volumeMounts | nindent 12 }}
@@ -177,6 +180,7 @@ spec:
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
+          {{- end }}
         {{- range .Values.containers.sidecars }}
         - name: {{ .name }}
           image: {{ .image }}
