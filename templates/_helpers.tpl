@@ -142,13 +142,13 @@ securityContext:
   capabilities:
     drop:
       - ALL
-{{- else }}
+{{- else -}}
 securityContext:
-{{- toYaml .Values.containers.main.securityContext | nindent 2 }}
+{{- toYaml .Values.containers.main.securityContext | nindent 2 -}}
 {{- end -}}
-{{- else if .Values.containers.main.securityContext }}
+{{- else if .Values.containers.main.securityContext -}}
 securityContext:
-{{- toYaml .Values.containers.main.securityContext | nindent 2 }}
+{{- toYaml .Values.containers.main.securityContext | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 

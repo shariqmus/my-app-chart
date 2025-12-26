@@ -124,7 +124,7 @@ spec:
               protocol: TCP
           {{- $containerSecurityContext := include "my-app-chart.getContainerSecurityContext" . }}
           {{- if $containerSecurityContext }}
-          {{- $containerSecurityContext | nindent 10 }}
+          {{- $containerSecurityContext | nindent 10 -}}
           {{- end }}
           {{- if .Values.containers.main.resources }}
           resources:
