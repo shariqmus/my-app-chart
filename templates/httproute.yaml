@@ -6,9 +6,9 @@ metadata:
   namespace: {{ include "my-app-chart.namespace" . }}
   labels:
     {{- include "my-app-chart.labels" . | nindent 4 }}
-  {{- with .Values.gateway.httproute.annotations }}
+  {{- if .Values.gateway.httproute.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml .Values.gateway.httproute.annotations | nindent 4 }}
   {{- else if .Values.gateway.hostnames }}
   annotations:
     external-dns.alpha.kubernetes.io/hostname: {{ index .Values.gateway.hostnames 0 | quote }}
