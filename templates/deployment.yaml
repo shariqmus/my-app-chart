@@ -38,7 +38,7 @@ spec:
     spec:
       {{- $podSecurityContext := include "my-app-chart.getPodSecurityContext" . }}
       {{- if $podSecurityContext }}
-      {{- $podSecurityContext | nindent 6 }}
+      {{- $podSecurityContext | nindent 6 -}}
       {{- end }}
       {{- if .Values.image.pullSecrets }}
       imagePullSecrets:

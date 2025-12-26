@@ -118,13 +118,13 @@ Get pod security context
 securityContext:
   runAsNonRoot: true
   fsGroup: 1000
-{{- else }}
+{{- else -}}
 securityContext:
-{{- toYaml .Values.workload.pod.securityContext | nindent 2 }}
+{{- toYaml .Values.workload.pod.securityContext | nindent 2 -}}
 {{- end -}}
-{{- else if .Values.workload.pod.securityContext }}
+{{- else if .Values.workload.pod.securityContext -}}
 securityContext:
-{{- toYaml .Values.workload.pod.securityContext | nindent 2 }}
+{{- toYaml .Values.workload.pod.securityContext | nindent 2 -}}
 {{- end -}}
 {{- end -}}
 
