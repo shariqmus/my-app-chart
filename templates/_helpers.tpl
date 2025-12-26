@@ -193,7 +193,9 @@ Get labels for resources
 {{- $_ := set $labels "app.kubernetes.io/environment" .Values.app.environment -}}
 {{- with .Values.app.labels -}}
 {{- range $key, $value := . -}}
+{{- if and $value (ne (toString $value) "") -}}
 {{- $_ := set $labels $key $value -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- toYaml $labels -}}
