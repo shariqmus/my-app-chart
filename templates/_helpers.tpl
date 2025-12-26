@@ -185,15 +185,18 @@ Get service account name
 Get labels for resources
 */}}
 {{- define "my-app-chart.labels" -}}
-app: {{ .Values.app.name }}
-app.kubernetes.io/name: {{ .Values.app.name }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ .Values.app.version | default .Chart.AppVersion | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/environment: {{ .Values.app.environment }}
-{{- with .Values.app.labels }}
-{{- toYaml . }}
-{{- end }}
+{{- $labels := dict "app" .Values.app.name -}}
+{{- $_ := set $labels "app.kubernetes.io/name" .Values.app.name -}}
+{{- $_ := set $labels "app.kubernetes.io/instance" .Release.Name -}}
+{{- $_ := set $labels "app.kubernetes.io/version" (.Values.app.version | default .Chart.AppVersion) -}}
+{{- $_ := set $labels "app.kubernetes.io/managed-by" .Release.Service -}}
+{{- $_ := set $labels "app.kubernetes.io/environment" .Values.app.environment -}}
+{{- with .Values.app.labels -}}
+{{- range $key, $value := . -}}
+{{- $_ := set $labels $key $value -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $labels -}}
 {{- end -}}
 
 {{/*

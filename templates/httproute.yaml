@@ -6,7 +6,7 @@ metadata:
   namespace: {{ include "my-app-chart.namespace" . }}
   labels:
     {{- include "my-app-chart.labels" . | nindent 4 }}
-  {{- if .Values.gateway.httproute.annotations }}
+  {{- if and .Values.gateway.httproute .Values.gateway.httproute.annotations }}
   annotations:
     {{- toYaml .Values.gateway.httproute.annotations | nindent 4 }}
   {{- else if .Values.gateway.hostnames }}
