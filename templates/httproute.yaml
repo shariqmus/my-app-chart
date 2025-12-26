@@ -5,33 +5,26 @@ metadata:
   name: {{ .Values.app.name }}-httproute
   namespace: {{ include "my-app-chart.namespace" . }}
   labels:
-    app: {{ .Values.app.name }}
+    {{- include "my-app-chart.labels" . | nindent 4 }}
+  {{- with .Values.gateway.httproute.annotations }}
   annotations:
-    # External-DNS annotations for Cloudflare
-    {{- if .Values.gateway.httproute.annotations }}
-    {{- toYaml .Values.gateway.httproute.annotations | nindent 4 }}
-    {{- else if .Values.gateway.hostnames }}
+    {{- toYaml . | nindent 4 }}
+  {{- else if .Values.gateway.hostnames }}
+  annotations:
     external-dns.alpha.kubernetes.io/hostname: {{ index .Values.gateway.hostnames 0 | quote }}
     external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-    {{- end }}
+  {{- end }}
 spec:
   parentRefs:
-  {{- if .Values.gateway.parentRefs }}
-  {{- range .Values.gateway.parentRefs }}
-    - name: {{ .name }}
-      {{- if .namespace }}
-      namespace: {{ .namespace }}
-      {{- end }}
-  {{- end }}
-  {{- else if .Values.gateway.createGateway }}
-    - name: {{ $.Values.app.name }}-gateway
-      namespace: {{ include "my-app-chart.namespace" $ }}
+  {{- if eq .Values.gateway.mode "dedicated" }}
+    - name: {{ .Values.app.name }}-gateway
+      namespace: {{ include "my-app-chart.namespace" . }}
   {{- else }}
     {{- if .Values.gateway.sharedGateway }}
     - name: {{ .Values.gateway.sharedGateway.name }}
       namespace: {{ .Values.gateway.sharedGateway.namespace }}
     {{- else }}
-    {{- fail "sharedGateway must be defined when createGateway is false" -}}
+    {{- fail "sharedGateway must be defined when gateway.mode is 'shared'" -}}
     {{- end }}
   {{- end }}
   hostnames:
@@ -39,34 +32,14 @@ spec:
     - {{ . | quote }}
   {{- end }}
   rules:
-  {{- range .Values.gateway.rules }}
+  {{- range .Values.gateway.routes }}
     - matches:
-      {{- range .matches }}
         - path:
-            type: {{ .path.type }}
-            value: {{ .path.value | quote }}
-          {{- if .headers }}
-          headers:
-          {{- range .headers }}
-            - name: {{ .name }}
-              value: {{ .value }}
-          {{- end }}
-          {{- end }}
-      {{- end }}
-      {{- if .filters }}
-      filters:
-      {{- toYaml .filters | nindent 8 }}
-      {{- end }}
+            type: PathPrefix
+            value: {{ .path | quote }}
       backendRefs:
-      {{- range .backendRefs }}
-        - name: {{ .name | default $.Values.app.name }}
-          port: {{ .port | default $.Values.service.port }}
-          {{- if .namespace }}
-          namespace: {{ .namespace }}
-          {{- end }}
-          {{- if .weight }}
-          weight: {{ .weight }}
-          {{- end }}
-      {{- end }}
+        - name: {{ $.Values.app.name }}
+          port: {{ .backendPort | default $.Values.service.port }}
+          weight: {{ .weight | default 1 }}
   {{- end }}
 {{- end }}

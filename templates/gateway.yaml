@@ -1,17 +1,17 @@
-{{- if and .Values.gateway.enabled .Values.gateway.createGateway }}
+{{- if and .Values.gateway.enabled (eq .Values.gateway.mode "dedicated") }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: {{ .Values.app.name }}-gateway
   namespace: {{ include "my-app-chart.namespace" . }}
   labels:
-    app: {{ .Values.app.name }}
-  {{- with .Values.gateway.gatewayAnnotations }}
+    {{- include "my-app-chart.labels" . | nindent 4 }}
+  {{- with .Values.gateway.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  gatewayClassName: {{ .Values.gateway.gatewayClassName | default "cilium" }}
   listeners:
   {{- range .Values.gateway.listeners }}
     - name: {{ .name }}
@@ -33,6 +33,6 @@ spec:
       {{- end }}
       allowedRoutes:
         namespaces:
-          from: {{ .allowedRoutes.namespaces.from | default "Same" }}
+          from: {{ .allowedRoutes.namespaces.from | default "All" }}
   {{- end }}
 {{- end }}

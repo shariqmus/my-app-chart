@@ -1,51 +1,266 @@
 {{- include "my-app-chart.validateImageTag" . }}
 {{- include "my-app-chart.enforceResourceLimits" . }}
 {{- include "my-app-chart.validateProbes" . }}
+{{- if eq .Values.workload.type "Deployment" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.app.name }}
   namespace: {{ include "my-app-chart.namespace" . }}
+  labels:
+    {{- include "my-app-chart.labels" . | nindent 4 }}
 spec:
   replicas: {{ include "my-app-chart.enforceReplicas" . }}
+  revisionHistoryLimit: {{ .Values.workload.revisionHistoryLimit }}
+  strategy:
+    {{- if eq .Values.workload.strategy.type "RollingUpdate" }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.workload.strategy.rollingUpdate.maxUnavailable | default 0 }}
+      maxSurge: {{ .Values.workload.strategy.rollingUpdate.maxSurge | default 1 }}
+    {{- else }}
+    type: {{ .Values.workload.strategy.type }}
+    {{- end }}
   selector:
     matchLabels:
-      app: {{ .Values.app.name }}
+      {{- include "my-app-chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      annotations:
+        {{- with .Values.workload.pod.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       labels:
-        app: {{ .Values.app.name }}
+        {{- include "my-app-chart.selectorLabels" . | nindent 8 }}
+        {{- with .Values.workload.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
-      {{- $podSecurityContext := include "my-app-chart.getSecurityContext" . }}
+      {{- $podSecurityContext := include "my-app-chart.getPodSecurityContext" . }}
       {{- if $podSecurityContext }}
       {{- $podSecurityContext | nindent 6 }}
       {{- end }}
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.image.pullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      {{- $serviceAccountName := include "my-app-chart.serviceAccountName" . }}
+      {{- if $serviceAccountName }}
+      serviceAccountName: {{ $serviceAccountName }}
+      {{- end }}
+      {{- if .Values.workload.pod.scheduling.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.workload.pod.scheduling.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workload.pod.scheduling.tolerations }}
+      tolerations:
+        {{- toYaml .Values.workload.pod.scheduling.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workload.pod.scheduling.affinity }}
+      affinity:
+        {{- toYaml .Values.workload.pod.scheduling.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.workload.pod.scheduling.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.workload.pod.scheduling.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.containers.init }}
+      initContainers:
+        {{- range .Values.containers.init }}
+        - name: {{ .name }}
+          image: {{ .image }}
+          {{- if .command }}
+          command:
+            {{- toYaml .command | nindent 12 }}
+          {{- end }}
+          {{- if .args }}
+          args:
+            {{- toYaml .args | nindent 12 }}
+          {{- end }}
+          {{- if .env }}
+          env:
+            {{- range .env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .envFrom }}
+          envFrom:
+            {{- if .envFrom.configMaps }}
+            {{- range .envFrom.configMaps }}
+            - configMapRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+            {{- if .envFrom.secrets }}
+            {{- range .envFrom.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if .resources }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          {{- end }}
+          {{- if .securityContext }}
+          securityContext:
+            {{- toYaml .securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .volumeMounts }}
+          volumeMounts:
+            {{- toYaml .volumeMounts | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
       containers:
-        - name: {{ .Values.app.name }}
-          image: {{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}
+        - name: {{ .Values.containers.main.name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.app.containerPort }}
+            - containerPort: {{ .Values.containers.main.port }}
+              protocol: TCP
           {{- $containerSecurityContext := include "my-app-chart.getContainerSecurityContext" . }}
           {{- if $containerSecurityContext }}
           {{- $containerSecurityContext | nindent 10 }}
           {{- end }}
+          {{- if .Values.containers.main.resources }}
           resources:
-            limits:
-              cpu: {{ .Values.app.resources.limits.cpu }}
-              memory: {{ .Values.app.resources.limits.memory }}
-            requests:
-              cpu: {{ .Values.app.resources.requests.cpu }}
-              memory: {{ .Values.app.resources.requests.memory }}
-          {{- if .Values.app.readinessProbe }}
+            {{- toYaml .Values.containers.main.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.containers.main.probes.readiness }}
           readinessProbe:
-            {{- toYaml .Values.app.readinessProbe | nindent 12 }}
+            {{- toYaml .Values.containers.main.probes.readiness | nindent 12 }}
           {{- end }}
-          {{- if .Values.app.livenessProbe }}
+          {{- if .Values.containers.main.probes.liveness }}
           livenessProbe:
-            {{- toYaml .Values.app.livenessProbe | nindent 12 }}
+            {{- toYaml .Values.containers.main.probes.liveness | nindent 12 }}
           {{- end }}
+          {{- if .Values.containers.main.probes.startup }}
+          startupProbe:
+            {{- toYaml .Values.containers.main.probes.startup | nindent 12 }}
+          {{- end }}
+          {{- if .Values.containers.main.env }}
           env:
-            {{- range .Values.app.env }}
+            {{- range .Values.containers.main.env }}
             - name: {{ .name }}
-              value: {{ .value }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
             {{- end }}
+          {{- end }}
+          {{- if .Values.containers.main.envFrom }}
+          envFrom:
+            {{- if .Values.containers.main.envFrom.configMaps }}
+            {{- range .Values.containers.main.envFrom.configMaps }}
+            - configMapRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.containers.main.envFrom.secrets }}
+            {{- range .Values.containers.main.envFrom.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.containers.main.volumeMounts }}
+            {{- toYaml .Values.containers.main.volumeMounts | nindent 12 }}
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+        {{- range .Values.containers.sidecars }}
+        - name: {{ .name }}
+          image: {{ .image }}
+          {{- if .imagePullPolicy }}
+          imagePullPolicy: {{ .imagePullPolicy }}
+          {{- end }}
+          {{- if .ports }}
+          ports:
+            {{- range .ports }}
+            - containerPort: {{ . }}
+              protocol: TCP
+            {{- end }}
+          {{- end }}
+          {{- if .env }}
+          env:
+            {{- range .env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if .envFrom }}
+          envFrom:
+            {{- if .envFrom.configMaps }}
+            {{- range .envFrom.configMaps }}
+            - configMapRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+            {{- if .envFrom.secrets }}
+            {{- range .envFrom.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if .resources }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          {{- end }}
+          {{- if .securityContext }}
+          securityContext:
+            {{- toYaml .securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .probes }}
+          {{- if .probes.readiness }}
+          readinessProbe:
+            {{- toYaml .probes.readiness | nindent 12 }}
+          {{- end }}
+          {{- if .probes.liveness }}
+          livenessProbe:
+            {{- toYaml .probes.liveness | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          {{- if .volumeMounts }}
+          volumeMounts:
+            {{- toYaml .volumeMounts | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- if or .Values.volumes .Values.persistence.enabled }}
+      volumes:
+        {{- range .Values.volumes }}
+        - name: {{ .name }}
+          {{- if .configMap }}
+          configMap:
+            name: {{ .configMap }}
+          {{- else if .secret }}
+          secret:
+            secretName: {{ .secret }}
+          {{- else if .emptyDir }}
+          emptyDir: {}
+          {{- else if .persistentVolumeClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .persistentVolumeClaim }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.app.name }}-pvc
+        {{- end }}
+      {{- end }}
+{{- end }}

@@ -1,161 +1,191 @@
-environment: dev
-
-namespace:
-  name: my-app
-
+# -------------------------------------------------------------------
+# 1. Application Identity (REQUIRED)
+# -------------------------------------------------------------------
 app:
   name: my-app
-  image:
-    repository: nginx
-    tag: alpine
-  replicas: 1
-  containerPort: 80
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "500m"
-      memory: "256Mi"
-  env: []
-  
-  # Production Policy Overlays:
-  # When environment is set to "prd", "prod", or "production", the following policies are automatically enforced:
-  # - Minimum 2 replicas (will fail if less than 2)
-  # - Image tag cannot be "latest" or empty
-  # - Resource limits and requests are required
-  # - Readiness and liveness probes are required
-  # - Security contexts are automatically applied (non-root user, read-only filesystem, dropped capabilities)
-  # 
-  # For production, you must configure the following:
-  
-  # Readiness probe (required in production)
-  # readinessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: 80
-  #   initialDelaySeconds: 10
-  #   periodSeconds: 10
-  #   timeoutSeconds: 5
-  #   successThreshold: 1
-  #   failureThreshold: 3
-  
-  # Liveness probe (required in production)
-  # livenessProbe:
-  #   httpGet:
-  #     path: /
-  #     port: 80
-  #   initialDelaySeconds: 30
-  #   periodSeconds: 10
-  #   timeoutSeconds: 5
-  #   successThreshold: 1
-  #   failureThreshold: 3
-  
-  # Optional: Custom security contexts (auto-applied in production if not specified)
-  # securityContext:
-  #   runAsNonRoot: true
-  #   runAsUser: 1000
-  #   fsGroup: 1000
-  # 
-  # containerSecurityContext:
-  #   allowPrivilegeEscalation: false
-  #   readOnlyRootFilesystem: true
-  #   capabilities:
-  #     drop:
-  #       - ALL
+  environment: dev              # dev | uat | prod
+  version: "1.0.0"              # logical app version (not image tag)
+  owner: team-x
 
+  labels:
+    app.kubernetes.io/part-of: platform
+    cost-center: cc-123
+
+# -------------------------------------------------------------------
+# 2. Image & Runtime
+# -------------------------------------------------------------------
+image:
+  repository: nginx
+  tag: alpine
+  pullPolicy: IfNotPresent
+  pullSecrets: []               # [{ name: regcred }]
+
+# -------------------------------------------------------------------
+# 3. Workload (Deployment)
+# -------------------------------------------------------------------
+workload:
+  type: Deployment              # Deployment | StatefulSet (future)
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  revisionHistoryLimit: 5
+
+  pod:
+    annotations: {}
+    labels: {}
+
+    securityContext:
+      runAsNonRoot: true
+      fsGroup: 1000
+
+    scheduling:
+      nodeSelector: {}
+      tolerations: []
+      affinity: {}
+      topologySpreadConstraints: []
+
+# -------------------------------------------------------------------
+# 4. Containers
+# -------------------------------------------------------------------
+containers:
+  main:
+    name: app
+    port: 80
+
+    env: []
+    envFrom:
+      configMaps: []
+      secrets: []
+
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "256Mi"
+
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: [ "ALL" ]
+
+    probes:
+      readiness: {}
+      liveness: {}
+
+    volumeMounts: []
+
+  init: []          # list of initContainers
+  sidecars: []      # list of additional containers
+
+# -------------------------------------------------------------------
+# 5. Volumes & Persistence
+# -------------------------------------------------------------------
+volumes: []
+
+persistence:
+  enabled: false
+  mountPath: /data
+  accessMode: ReadWriteOnce
+  size: 8Gi
+  storageClass: ""
+
+# -------------------------------------------------------------------
+# 6. Networking
+# -------------------------------------------------------------------
 service:
+  enabled: true
   type: ClusterIP
   port: 80
   targetPort: 80
+  annotations: {}
 
-# Gateway API settings
 gateway:
   enabled: true
-  
-  # Set to false to use a shared gateway (recommended)
-  # Set to true to create a dedicated gateway per app
-  createGateway: false
-  
-  # If createGateway: false, specify the shared gateway
+
+  mode: shared                    # shared | dedicated
   sharedGateway:
     name: shared-gateway
     namespace: gateway-system
-  
-  # Gateway configuration (only used if createGateway: true)
-  gatewayClassName: cilium  # FIXED: Changed from istio to cilium
-  
-  # Optional: Gateway-level annotations (for DO LB configuration)
-  gatewayAnnotations: {}
-  # Example annotations:
-  # gatewayAnnotations:
-  #   service.beta.kubernetes.io/do-loadbalancer-size-slug: "lb-small"
-  #   service.beta.kubernetes.io/do-loadbalancer-algorithm: "round_robin"
-  
-  # Listener configuration (only used if createGateway: true)
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
-        namespaces:
-          from: All  # Changed from Same to All for shared gateway
-    - name: https
-      protocol: HTTPS
-      port: 443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - name: wildcard-tls  # Use a wildcard cert for shared gateway
-            kind: Secret
-            namespace: gateway-system  # Cert in gateway namespace
-      allowedRoutes:
-        namespaces:
-          from: All
-  
-  # HTTPRoute configuration (always used)
-  httproute:
-    annotations:
-      # External-DNS will use first hostname if not specified
-      external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
-      external-dns.alpha.kubernetes.io/ttl: "120"
-      # Optional: explicitly set hostname
-      # external-dns.alpha.kubernetes.io/hostname: "my-app.example.com"
-  
-  # Optional: Use custom parent gateway reference
-  # parentRefs:
-  #   - name: custom-gateway
-  #     namespace: other-namespace
-  
-  # Hostnames for this app
+
   hostnames:
     - my-app.example.com
-  
-  # Routing rules
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: my-app  # Should match app.name (or omit to use app.name automatically)
-          port: 80  # Should match service.port (or omit to use service.port automatically)
-          weight: 1
 
-# Optional: Keep ingress for backward compatibility during migration
+  routes:
+    - path: /
+      backendPort: 80
+      weight: 1
+
 ingress:
-  enabled: false
+  enabled: false                  # legacy fallback only
 
-vaultStaticSecret:
+# -------------------------------------------------------------------
+# 7. Identity & Access
+# -------------------------------------------------------------------
+serviceAccount:
+  enabled: true
+  name: ""
+  annotations: {}
+
+rbac:
+  enabled: false                  # roles defined externally
+
+# -------------------------------------------------------------------
+# 8. Secrets (Vault / External)
+# -------------------------------------------------------------------
+secrets:
+  vault:
+    enabled: false
+    authRef: vault-auth
+    mount: kv
+    path: dev/apps/my-app
+    destination:
+      name: my-app-secret
+
+# -------------------------------------------------------------------
+# 9. Autoscaling & Resilience
+# -------------------------------------------------------------------
+autoscaling:
   enabled: false
-  # Optional: override name/namespace, otherwise derived from app/namespace values
-  # name: app-test-secret # Defaults to {app.name}-secret if not specified
-  # namespace: my-app # Defaults to the same namespace as the app if not specified
-  # vaultAuthRef: vault-auth
-  # mount: kv
-  # type: kv-v2
-  # path: # Defaults to {environment}/apps/{app.name} if not specified, where `environment` is the top-level value
-  # destination:
-    # Kubernetes Secret name to create from Vault data
-    # name: my-app-secret  # Defaults to {app.name}-secret if not specified
-    # create: true  # Defaults to true if not specified
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    cpu: 60
+    memory: 60
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# -------------------------------------------------------------------
+# 10. Observability
+# -------------------------------------------------------------------
+observability:
+  metrics:
+    enabled: false
+    path: /metrics
+    interval: 15s
+
+  logging:
+    enabled: false
+
+  tracing:
+    enabled: false
+
+# -------------------------------------------------------------------
+# 11. Platform Policy Toggles (Enforced in Templates)
+# -------------------------------------------------------------------
+policies:
+  production:
+    enforceMinReplicas: 2
+    forbidLatestTag: true
+    requireResources: true
+    requireProbes: true
+    enforceSecurityContext: true
