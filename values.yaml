@@ -150,6 +150,21 @@ secrets:
       name: my-app-secret
 
 # -------------------------------------------------------------------
+# 8.5. ConfigMap
+# -------------------------------------------------------------------
+configMap:
+  enabled: false
+  name: ""                    # defaults to {app.name}-config if empty
+  annotations: {}
+  data: {}                    # key-value pairs for configuration
+  # Example:
+  # data:
+  #   APP_ENV: production
+  #   LOG_LEVEL: info
+  #   CONFIG_FILE: /etc/app/config.yaml
+  binaryData: {}              # key-value pairs for binary data (base64 encoded)
+
+# -------------------------------------------------------------------
 # 9. Autoscaling & Resilience
 # -------------------------------------------------------------------
 autoscaling:

@@ -182,6 +182,19 @@ Get service account name
 {{- end -}}
 
 {{/*
+Get ConfigMap name
+*/}}
+{{- define "my-app-chart.configMapName" -}}
+{{- if .Values.configMap.enabled -}}
+{{- if .Values.configMap.name -}}
+{{- .Values.configMap.name -}}
+{{- else -}}
+{{- printf "%s-config" .Values.app.name -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Get labels for resources
 */}}
 {{- define "my-app-chart.labels" -}}
